@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Poke Idle World - Multi Account Board</title>
+    <link rel="stylesheet" href="theme.css" />
+    <link rel="stylesheet" href="workspaces.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Navegação do board">
+        <div class="sidebar-brand">
+          <span class="brand-mark">P</span>
+          <div><strong>POKE</strong><span>SESSION DECK</span></div>
+        </div>
+
+        <div class="sidebar-section-heading"><span>SEUS JOGOS · ABAS</span><span class="account-total" id="workspaceCount">01</span></div>
+        <nav id="workspaceList" class="workspace-list" aria-label="Selecionar jogo"></nav>
+        <button id="addWorkspaceBtn" class="add-workspace-btn" type="button"><span>+</span> Nova aba de jogo</button>
+
+        <button id="showAll" class="restore-all-btn" type="button">
+          <span class="restore-icon">↗</span><span><strong>Restaurar grade</strong><small>Exibir as 4 contas desta aba</small></span>
+        </button>
+        <button id="clearCacheAll" class="restore-all-btn cache-all-btn" type="button">
+          <span class="restore-icon">⟳</span><span><strong>Limpar cache</strong><small>Esta aba · mantém os logins</small></span>
+        </button>
+
+        <div class="sidebar-footer">
+          <span class="footer-orb"></span>
+          <div><strong>Sessões isoladas</strong><small>Separadas por jogo e conta</small></div>
+        </div>
+      </aside>
+
+      <section class="workspace">
+        <header class="topbar">
+          <div class="page-heading">
+            <p class="eyebrow">SEU ESPAÇO DE JOGO</p>
+            <h1 id="activeWorkspaceTitle">Poke Idle</h1>
+            <p class="brand-caption">Cada jogo tem quatro sessões próprias e continua ativo ao trocar de aba.</p>
+          </div>
+
+          <div class="topbar-right">
+            <div class="board-summary" aria-live="polite">
+              <span id="visibleCount" class="summary-value">04</span>
+              <span class="summary-copy">JANELAS<br />ATIVAS</span>
+            </div>
+            <div class="topbar-actions">
+              <button id="optimizeMemoryBtn" class="toolbar-btn" type="button" title="Forçar limpeza de memória RAM e cache"><span>⚡</span> Otimizar RAM</button>
+              <button id="performanceToggle" class="toolbar-btn" type="button" aria-expanded="false" aria-controls="performancePanel"><span>◌</span> Desempenho</button>
+              <button id="urlToggle" class="toolbar-btn" type="button" aria-expanded="false"><span>⌁</span> Endereços</button>
+              <button id="columnToggle" class="toolbar-btn" type="button"><span>◫</span> Coluna direita</button>
+              <button id="focusAll" class="primary-btn" type="button"><span>▦</span> Grade 2 × 2</button>
+            </div>
+          </div>
+        </header>
+
+        <section id="performancePanel" class="performance-panel" aria-labelledby="performanceTitle" hidden>
+          <div class="performance-heading">
+            <div>
+              <p class="eyebrow">MONITORAMENTO DO SISTEMA</p>
+              <h2 id="performanceTitle">Uso do computador</h2>
+              <p class="performance-caption">Leituras locais do Windows · atualização a cada 2 segundos</p>
+            </div>
+            <div class="performance-heading-actions">
+              <span id="performanceStatus" class="performance-status"><span class="status-led"></span><span>Iniciando monitor</span></span>
+              <button id="performanceClose" class="performance-close" type="button" aria-label="Fechar monitor">×</button>
+            </div>
+          </div>
+
+          <div class="metric-cards">
+            <article class="metric-card metric-cpu">
+              <div class="metric-card-heading"><span class="metric-icon">CPU</span><span class="metric-name">Processador</span><span class="metric-source">TOTAL</span></div>
+              <div class="metric-reading"><strong id="cpuValue">—</strong><span id="cpuDetail">aguardando leitura</span></div>
+              <canvas id="cpuChart" class="metric-chart" height="64" role="img" aria-label="Histórico de uso de CPU nos últimos 60 segundos"></canvas>
+            </article>
+            <article class="metric-card metric-ram">
+              <div class="metric-card-heading"><span class="metric-icon">RAM</span><span class="metric-name">Memória</span><span class="metric-source">SISTEMA</span></div>
+              <div class="metric-reading"><strong id="ramValue">—</strong><span id="ramDetail">aguardando leitura</span></div>
+              <canvas id="ramChart" class="metric-chart" height="64" role="img" aria-label="Histórico de uso de memória nos últimos 60 segundos"></canvas>
+            </article>
+            <article class="metric-card metric-gpu">
+              <div class="metric-card-heading"><span class="metric-icon">GPU</span><span class="metric-name">Gráficos</span><span class="metric-source">MOTOR MÁX.</span></div>
+              <div class="metric-reading"><strong id="gpuValue">—</strong><span id="gpuDetail">aguardando leitura</span></div>
+              <canvas id="gpuChart" class="metric-chart" height="64" role="img" aria-label="Histórico do motor de GPU mais ocupado nos últimos 60 segundos"></canvas>
+            </article>
+          </div>
+
+          <div class="resource-table-wrap">
+            <table class="resource-table">
+              <thead><tr><th>RECURSO</th><th>USO ATUAL</th><th>DETALHE</th></tr></thead>
+              <tbody>
+                <tr><td><span class="table-dot cpu-dot"></span>CPU total</td><td id="cpuTableValue">—</td><td>Todos os processadores lógicos</td></tr>
+                <tr><td><span class="table-dot ram-dot"></span>RAM do sistema</td><td id="ramTableValue">—</td><td id="ramTableDetail">Memória usada / total</td></tr>
+                <tr><td><span class="table-dot gpu-dot"></span>GPU · pico de motor</td><td id="gpuTableValue">—</td><td id="gpuTableDetail">Contador de desempenho do Windows</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="performance-footnote">O gráfico mostra o uso do computador inteiro. GPU representa o motor reportado como mais ocupado pelo Windows, não a soma dos motores.</p>
+        </section>
+
+        <main class="screen-grid">
+        <article class="game-window is-focused" data-account-index="0">
+          <div class="window-chrome">
+            <div class="window-controls">
+              <span class="dot red"></span>
+              <span class="dot yellow"></span>
+              <span class="dot green"></span>
+            </div>
+            <div class="window-meta">
+              <span class="account-badge">01</span>
+              <strong>Azulon</strong>
+            </div>
+            <div class="pane-status" aria-live="polite"><span class="status-led"></span><span class="status-label">Conectando ao site</span></div>
+            <div class="window-actions">
+              <button type="button" data-action="rename" aria-label="Renomear Conta 01" title="Renomear conta">✎</button>
+              <button type="button" data-action="focus" aria-label="Focar Conta 01" title="Focar">⛶</button>
+              <button type="button" data-action="open" aria-label="Abrir Conta 01 em nova aba" title="Abrir em nova aba">↗</button>
+              <button type="button" data-action="hide" aria-label="Ocultar Conta 01" title="Ocultar">−</button>
+            </div>
+          </div>
+
+          <div class="site-toolbar">
+            <label class="site-label" for="site-url-1">URL</label>
+            <input id="site-url-1" class="site-url" type="url" value="https://poke.idleworld.online/play" placeholder="https://site.com" />
+            <button class="load-site-btn" type="button">Abrir</button>
+          </div>
+
+          <div class="frame-shell" data-pane-index="0">
+            <div class="frame-placeholder">
+              <span class="placeholder-icon">01</span>
+              <strong>Janela isolada da Conta 01</strong>
+              <span>Inicie o aplicativo desktop para abrir o jogo nesta janela.</span>
+              <a href="https://poke.idleworld.online/play" target="_blank" rel="noopener noreferrer">Abrir jogo em outra aba</a>
+            </div>
+          </div>
+        </article>
+
+        <article class="game-window" data-account-index="1">
+          <div class="window-chrome">
+            <div class="window-controls">
+              <span class="dot red"></span>
+              <span class="dot yellow"></span>
+              <span class="dot green"></span>
+            </div>
+            <div class="window-meta">
+              <span class="account-badge">02</span>
+              <strong>Verdeira</strong>
+            </div>
+            <div class="pane-status" aria-live="polite"><span class="status-led"></span><span class="status-label">Conectando ao site</span></div>
+            <div class="window-actions">
+              <button type="button" data-action="rename" aria-label="Renomear Conta 02" title="Renomear conta">✎</button>
+              <button type="button" data-action="focus" aria-label="Focar Conta 02" title="Focar">⛶</button>
+              <button type="button" data-action="open" aria-label="Abrir Conta 02 em nova aba" title="Abrir em nova aba">↗</button>
+              <button type="button" data-action="hide" aria-label="Ocultar Conta 02" title="Ocultar">−</button>
+            </div>
+          </div>
+
+          <div class="site-toolbar">
+            <label class="site-label" for="site-url-2">URL</label>
+            <input id="site-url-2" class="site-url" type="url" value="https://poke.idleworld.online/play" placeholder="https://site.com" />
+            <button class="load-site-btn" type="button">Abrir</button>
+          </div>
+
+          <div class="frame-shell" data-pane-index="1">
+            <div class="frame-placeholder">
+              <span class="placeholder-icon">02</span>
+              <strong>Janela isolada da Conta 02</strong>
+              <span>Inicie o aplicativo desktop para abrir o jogo nesta janela.</span>
+              <a href="https://poke.idleworld.online/play" target="_blank" rel="noopener noreferrer">Abrir jogo em outra aba</a>
+            </div>
+          </div>
+        </article>
+
+        <article class="game-window" data-account-index="2">
+          <div class="window-chrome">
+            <div class="window-controls">
+              <span class="dot red"></span>
+              <span class="dot yellow"></span>
+              <span class="dot green"></span>
+            </div>
+            <div class="window-meta">
+              <span class="account-badge">03</span>
+              <strong>Rubi</strong>
+            </div>
+            <div class="pane-status" aria-live="polite"><span class="status-led"></span><span class="status-label">Conectando ao site</span></div>
+            <div class="window-actions">
+              <button type="button" data-action="rename" aria-label="Renomear Conta 03" title="Renomear conta">✎</button>
+              <button type="button" data-action="focus" aria-label="Focar Conta 03" title="Focar">⛶</button>
+              <button type="button" data-action="open" aria-label="Abrir Conta 03 em nova aba" title="Abrir em nova aba">↗</button>
+              <button type="button" data-action="hide" aria-label="Ocultar Conta 03" title="Ocultar">−</button>
+            </div>
+          </div>
+
+          <div class="site-toolbar">
+            <label class="site-label" for="site-url-3">URL</label>
+            <input id="site-url-3" class="site-url" type="url" value="https://poke.idleworld.online/play" placeholder="https://site.com" />
+            <button class="load-site-btn" type="button">Abrir</button>
+          </div>
+
+          <div class="frame-shell" data-pane-index="2">
+            <div class="frame-placeholder">
+              <span class="placeholder-icon">03</span>
+              <strong>Janela isolada da Conta 03</strong>
+              <span>Inicie o aplicativo desktop para abrir o jogo nesta janela.</span>
+              <a href="https://poke.idleworld.online/play" target="_blank" rel="noopener noreferrer">Abrir jogo em outra aba</a>
+            </div>
+          </div>
+        </article>
+
+        <article class="game-window" data-account-index="3">
+          <div class="window-chrome">
+            <div class="window-controls">
+              <span class="dot red"></span>
+              <span class="dot yellow"></span>
+              <span class="dot green"></span>
+            </div>
+            <div class="window-meta">
+              <span class="account-badge">04</span>
+              <strong>Prism</strong>
+            </div>
+            <div class="pane-status" aria-live="polite"><span class="status-led"></span><span class="status-label">Conectando ao site</span></div>
+            <div class="window-actions">
+              <button type="button" data-action="rename" aria-label="Renomear Conta 04" title="Renomear conta">✎</button>
+              <button type="button" data-action="focus" aria-label="Focar Conta 04" title="Focar">⛶</button>
+              <button type="button" data-action="open" aria-label="Abrir Conta 04 em nova aba" title="Abrir em nova aba">↗</button>
+              <button type="button" data-action="hide" aria-label="Ocultar Conta 04" title="Ocultar">−</button>
+            </div>
+          </div>
+
+          <div class="site-toolbar">
+            <label class="site-label" for="site-url-4">URL</label>
+            <input id="site-url-4" class="site-url" type="url" value="https://poke.idleworld.online/play" placeholder="https://site.com" />
+            <button class="load-site-btn" type="button">Abrir</button>
+          </div>
+
+          <div class="frame-shell" data-pane-index="3">
+            <div class="frame-placeholder">
+              <span class="placeholder-icon">04</span>
+              <strong>Janela isolada da Conta 04</strong>
+              <span>Inicie o aplicativo desktop para abrir o jogo nesta janela.</span>
+              <a href="https://poke.idleworld.online/play" target="_blank" rel="noopener noreferrer">Abrir jogo em outra aba</a>
+            </div>
+          </div>
+        </article>
+        </main>
+      </section>
+
+      <dialog id="renameDialog" class="rename-dialog" aria-labelledby="renameTitle">
+        <form id="renameForm" method="dialog">
+          <h2 id="renameTitle">Renomear conta</h2>
+          <label for="renameInput">Nome exibido</label>
+          <input id="renameInput" name="accountName" type="text" maxlength="32" required autocomplete="off" />
+          <div class="dialog-actions">
+            <button class="ghost-btn" type="submit" value="cancel" formnovalidate>Cancelar</button>
+            <button class="primary-btn" type="submit" value="save">Salvar nome</button>
+          </div>
+        </form>
+      </dialog>
+
+      <dialog id="workspaceNameDialog" class="rename-dialog" aria-labelledby="workspaceNameTitle">
+        <form id="workspaceNameForm" method="dialog">
+          <h2 id="workspaceNameTitle">Nome da aba de jogo</h2>
+          <label for="workspaceNameInput">Nome exibido na barra lateral</label>
+          <input id="workspaceNameInput" name="workspaceName" type="text" maxlength="40" required autocomplete="off" />
+          <div class="dialog-actions">
+            <button class="ghost-btn" type="submit" value="cancel" formnovalidate>Cancelar</button>
+            <button class="primary-btn" type="submit" value="save">Salvar aba</button>
+          </div>
+        </form>
+      </dialog>
+    </div>
+
+    <script src="app.js"></script>
+    <script src="resource-monitor.js"></script>
+  </body>
+</html>
