@@ -223,6 +223,44 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--purple-brig
   .board-summary { align-self: flex-end; }
   .topbar-actions { flex-wrap: wrap; justify-content: flex-end; }
   .pane-status { max-width: 140px; }
+
+  /* The right dock needs a wide workspace of its own. Stack it above the
+     content before the window gets narrow enough for toolbar/sidebar collision. */
+  .app-shell[data-layout="right"] {
+    height: auto;
+    min-height: 100vh;
+    grid-template-columns: minmax(0,1fr);
+    grid-template-rows: auto minmax(0,1fr);
+  }
+  .app-shell[data-layout="right"] > .sidebar {
+    display: grid;
+    grid-column: 1;
+    grid-row: 1;
+    grid-template-columns: minmax(0,1fr) auto;
+    align-items: center;
+    gap: 12px;
+    padding: 13px 16px;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .app-shell[data-layout="right"] > .sidebar .sidebar-brand { padding: 0; }
+  .app-shell[data-layout="right"] > .sidebar .category-switch { width: min(250px,100%); margin: 0; }
+  .app-shell[data-layout="right"] > .sidebar .sidebar-section-heading,
+  .app-shell[data-layout="right"] > .sidebar .sidebar-footer { display: none; }
+  .app-shell[data-layout="right"] > .sidebar .workspace-list {
+    display: flex;
+    grid-column: 1 / -1;
+    width: 100%;
+    max-width: 100%;
+    max-height: none;
+    overflow-x: auto;
+    margin: 0;
+  }
+  .app-shell[data-layout="right"] > .sidebar .workspace-tab { min-width: 154px; }
+  .app-shell[data-layout="right"] > .workspace { grid-column: 1; grid-row: 2; min-width: 0; padding: 18px 19px; }
+  .app-shell[data-layout="right"] .topbar { align-items: center; flex-direction: row; flex-wrap: wrap; gap: 12px; }
+  .app-shell[data-layout="right"] .topbar-right { width: auto; max-width: 100%; align-items: center; flex: 1 1 420px; flex-direction: row; justify-content: flex-end; }
+  .app-shell[data-layout="right"] .topbar-actions { min-width: 0; max-width: 100%; flex-wrap: wrap; }
 }
 @media (max-width: 880px) {
   body { overflow: auto; }
