@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Símbolo de sincronização do Sincronize">
+  <defs>
+    <linearGradient id="bg" x1="24" y1="16" x2="236" y2="244" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#172c52"/>
+      <stop offset=".54" stop-color="#182146"/>
+      <stop offset="1" stop-color="#321749"/>
+    </linearGradient>
+    <linearGradient id="flow" x1="49" y1="52" x2="205" y2="210" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#69e5f1"/>
+      <stop offset=".52" stop-color="#93a8ff"/>
+      <stop offset="1" stop-color="#e38bff"/>
+    </linearGradient>
+    <linearGradient id="node" x1="74" y1="72" x2="186" y2="186" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#f8fdff"/>
+      <stop offset="1" stop-color="#9fdcff"/>
+    </linearGradient>
+  </defs>
+  <rect x="8" y="8" width="240" height="240" rx="66" fill="url(#bg)"/>
+  <rect x="9" y="9" width="238" height="238" rx="65" fill="none" stroke="#d8f2ff" stroke-opacity=".16" stroke-width="2"/>
+  <path d="M79 88a63 63 0 0 1 103-13l11 11M177 168a63 63 0 0 1-103 13l-11-11" fill="none" stroke="url(#flow)" stroke-linecap="round" stroke-width="12"/>
+  <path d="m177 55 18 31-35 1M79 201l-18-31 35-1" fill="none" stroke="url(#flow)" stroke-linecap="round" stroke-linejoin="round" stroke-width="11"/>
+  <path d="M91 113h25V88H91a10 10 0 0 0-10 10v25h25v-10H91zM165 143h-25v25h25a10 10 0 0 0 10-10v-25h-25v10h15z" fill="url(#node)"/>
+  <circle cx="128" cy="128" r="13" fill="#fff" fill-opacity=".96"/>
+  <circle cx="128" cy="128" r="5" fill="#668bf2"/>
+  <path d="M38 72c19-27 50-44 84-44" fill="none" stroke="#fff" stroke-linecap="round" stroke-opacity=".1" stroke-width="2"/>
+</svg>

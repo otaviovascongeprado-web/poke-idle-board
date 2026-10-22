@@ -12,7 +12,7 @@ if not exist "node_modules\electron\dist\electron.exe" (
     pause
     exit /b 1
   )
-  echo Instalando dependencias do board...
+  echo Instalando dependencias do Sincronize...
   call npm.cmd install
   if errorlevel 1 (
     echo Erro ao instalar dependencias.

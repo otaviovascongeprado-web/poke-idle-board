@@ -3,7 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Poke Idle World - Multi Account Board</title>
+    <title>Sincronize — Abas e aplicativos</title>
+    <link rel="icon" type="image/png" href="assets/sincronize-icon.png" />
     <link rel="stylesheet" href="theme.css" />
     <link rel="stylesheet" href="workspaces.css" />
   </head>
@@ -11,33 +12,33 @@
     <div class="app-shell">
       <aside class="sidebar" aria-label="Navegação do board">
         <div class="sidebar-brand">
-          <span class="brand-mark">P</span>
-          <div><strong>POKE</strong><span>SESSION DECK</span></div>
+          <img class="brand-mark" src="assets/sincronize-mark.svg" alt="" />
+          <div><strong>SINCRONIZE</strong><span>ABAS E APLICATIVOS</span></div>
         </div>
 
-        <div class="sidebar-section-heading"><span>SEUS JOGOS · ABAS</span><span class="account-total" id="workspaceCount">01</span></div>
-        <nav id="workspaceList" class="workspace-list" aria-label="Selecionar jogo"></nav>
-        <button id="addWorkspaceBtn" class="add-workspace-btn" type="button"><span>+</span> Nova aba de jogo</button>
+        <nav class="category-switch" aria-label="Tipo de sessão">
+          <button type="button" class="category-button is-active" data-category="site" aria-pressed="true"><span>⌁</span> Sites</button>
+          <button type="button" class="category-button" data-category="computer" aria-pressed="false"><span>▣</span> Computador</button>
+        </nav>
+        <div class="sidebar-section-heading"><span id="workspaceSectionLabel">SITES · ABAS</span><span class="account-total" id="workspaceCount">01</span></div>
+        <nav id="workspaceList" class="workspace-list" aria-label="Selecionar site ou aplicativo"></nav>
+        <button id="addWorkspaceBtn" class="add-workspace-btn" type="button"><span>+</span> Novo site</button>
 
-        <button id="showAll" class="restore-all-btn" type="button">
-          <span class="restore-icon">↗</span><span><strong>Restaurar grade</strong><small>Exibir as 4 contas desta aba</small></span>
-        </button>
         <button id="clearCacheAll" class="restore-all-btn cache-all-btn" type="button">
           <span class="restore-icon">⟳</span><span><strong>Limpar cache</strong><small>Esta aba · mantém os logins</small></span>
         </button>
 
         <div class="sidebar-footer">
           <span class="footer-orb"></span>
-          <div><strong>Sessões isoladas</strong><small>Separadas por jogo e conta</small></div>
+          <div><strong>Sessões isoladas</strong><small>Separadas por aba e painel</small></div>
         </div>
       </aside>
 
       <section class="workspace">
         <header class="topbar">
           <div class="page-heading">
-            <p class="eyebrow">SEU ESPAÇO DE JOGO</p>
+            <p class="eyebrow">SINCRONIZE · SUAS TELAS</p>
             <h1 id="activeWorkspaceTitle">Poke Idle</h1>
-            <p class="brand-caption">Cada jogo tem quatro sessões próprias e continua ativo ao trocar de aba.</p>
           </div>
 
           <div class="topbar-right">
@@ -46,58 +47,15 @@
               <span class="summary-copy">JANELAS<br />ATIVAS</span>
             </div>
             <div class="topbar-actions">
-              <button id="optimizeMemoryBtn" class="toolbar-btn" type="button" title="Forçar limpeza de memória RAM e cache"><span>⚡</span> Otimizar RAM</button>
-              <button id="performanceToggle" class="toolbar-btn" type="button" aria-expanded="false" aria-controls="performancePanel"><span>◌</span> Desempenho</button>
+              <div class="fps-indicator" role="status" aria-label="Taxa de atualização da interface">
+                <span class="fps-led" aria-hidden="true"></span><strong id="fpsValue">—</strong><small>FPS</small>
+              </div>
               <button id="urlToggle" class="toolbar-btn" type="button" aria-expanded="false"><span>⌁</span> Endereços</button>
-              <button id="columnToggle" class="toolbar-btn" type="button"><span>◫</span> Coluna direita</button>
-              <button id="focusAll" class="primary-btn" type="button"><span>▦</span> Grade 2 × 2</button>
+              <button id="focusAll" class="primary-btn" type="button" hidden><span>▦</span> Restaurar painéis</button>
+              <button id="appearanceToggle" class="toolbar-btn" type="button" aria-haspopup="dialog"><span>⚙</span> Interface</button>
             </div>
           </div>
         </header>
-
-        <section id="performancePanel" class="performance-panel" aria-labelledby="performanceTitle" hidden>
-          <div class="performance-heading">
-            <div>
-              <p class="eyebrow">MONITORAMENTO DO SISTEMA</p>
-              <h2 id="performanceTitle">Uso do computador</h2>
-              <p class="performance-caption">Leituras locais do Windows · atualização a cada 2 segundos</p>
-            </div>
-            <div class="performance-heading-actions">
-              <span id="performanceStatus" class="performance-status"><span class="status-led"></span><span>Iniciando monitor</span></span>
-              <button id="performanceClose" class="performance-close" type="button" aria-label="Fechar monitor">×</button>
-            </div>
-          </div>
-
-          <div class="metric-cards">
-            <article class="metric-card metric-cpu">
-              <div class="metric-card-heading"><span class="metric-icon">CPU</span><span class="metric-name">Processador</span><span class="metric-source">TOTAL</span></div>
-              <div class="metric-reading"><strong id="cpuValue">—</strong><span id="cpuDetail">aguardando leitura</span></div>
-              <canvas id="cpuChart" class="metric-chart" height="64" role="img" aria-label="Histórico de uso de CPU nos últimos 60 segundos"></canvas>
-            </article>
-            <article class="metric-card metric-ram">
-              <div class="metric-card-heading"><span class="metric-icon">RAM</span><span class="metric-name">Memória</span><span class="metric-source">SISTEMA</span></div>
-              <div class="metric-reading"><strong id="ramValue">—</strong><span id="ramDetail">aguardando leitura</span></div>
-              <canvas id="ramChart" class="metric-chart" height="64" role="img" aria-label="Histórico de uso de memória nos últimos 60 segundos"></canvas>
-            </article>
-            <article class="metric-card metric-gpu">
-              <div class="metric-card-heading"><span class="metric-icon">GPU</span><span class="metric-name">Gráficos</span><span class="metric-source">MOTOR MÁX.</span></div>
-              <div class="metric-reading"><strong id="gpuValue">—</strong><span id="gpuDetail">aguardando leitura</span></div>
-              <canvas id="gpuChart" class="metric-chart" height="64" role="img" aria-label="Histórico do motor de GPU mais ocupado nos últimos 60 segundos"></canvas>
-            </article>
-          </div>
-
-          <div class="resource-table-wrap">
-            <table class="resource-table">
-              <thead><tr><th>RECURSO</th><th>USO ATUAL</th><th>DETALHE</th></tr></thead>
-              <tbody>
-                <tr><td><span class="table-dot cpu-dot"></span>CPU total</td><td id="cpuTableValue">—</td><td>Todos os processadores lógicos</td></tr>
-                <tr><td><span class="table-dot ram-dot"></span>RAM do sistema</td><td id="ramTableValue">—</td><td id="ramTableDetail">Memória usada / total</td></tr>
-                <tr><td><span class="table-dot gpu-dot"></span>GPU · pico de motor</td><td id="gpuTableValue">—</td><td id="gpuTableDetail">Contador de desempenho do Windows</td></tr>
-              </tbody>
-            </table>
-          </div>
-          <p class="performance-footnote">O gráfico mostra o uso do computador inteiro. GPU representa o motor reportado como mais ocupado pelo Windows, não a soma dos motores.</p>
-        </section>
 
         <main class="screen-grid">
         <article class="game-window is-focused" data-account-index="0">
@@ -116,6 +74,8 @@
               <button type="button" data-action="rename" aria-label="Renomear Conta 01" title="Renomear conta">✎</button>
               <button type="button" data-action="focus" aria-label="Focar Conta 01" title="Focar">⛶</button>
               <button type="button" data-action="open" aria-label="Abrir Conta 01 em nova aba" title="Abrir em nova aba">↗</button>
+              <button type="button" data-action="configure-app" aria-label="Configurar aplicativo da Conta 01" title="Configurar aplicativo instalado">⚙</button>
+              <button type="button" data-action="launch-app" aria-label="Iniciar aplicativo da Conta 01" title="Iniciar aplicativo">▶</button>
               <button type="button" data-action="hide" aria-label="Ocultar Conta 01" title="Ocultar">−</button>
             </div>
           </div>
@@ -130,8 +90,8 @@
             <div class="frame-placeholder">
               <span class="placeholder-icon">01</span>
               <strong>Janela isolada da Conta 01</strong>
-              <span>Inicie o aplicativo desktop para abrir o jogo nesta janela.</span>
-              <a href="https://poke.idleworld.online/play" target="_blank" rel="noopener noreferrer">Abrir jogo em outra aba</a>
+              <span>Configure um site ou aplicativo para este painel.</span>
+              <a href="https://poke.idleworld.online/play" target="_blank" rel="noopener noreferrer">Abrir site em outra janela</a>
             </div>
           </div>
         </article>
@@ -152,6 +112,8 @@
               <button type="button" data-action="rename" aria-label="Renomear Conta 02" title="Renomear conta">✎</button>
               <button type="button" data-action="focus" aria-label="Focar Conta 02" title="Focar">⛶</button>
               <button type="button" data-action="open" aria-label="Abrir Conta 02 em nova aba" title="Abrir em nova aba">↗</button>
+              <button type="button" data-action="configure-app" aria-label="Configurar aplicativo da Conta 02" title="Configurar aplicativo instalado">⚙</button>
+              <button type="button" data-action="launch-app" aria-label="Iniciar aplicativo da Conta 02" title="Iniciar aplicativo">▶</button>
               <button type="button" data-action="hide" aria-label="Ocultar Conta 02" title="Ocultar">−</button>
             </div>
           </div>
@@ -166,8 +128,8 @@
             <div class="frame-placeholder">
               <span class="placeholder-icon">02</span>
               <strong>Janela isolada da Conta 02</strong>
-              <span>Inicie o aplicativo desktop para abrir o jogo nesta janela.</span>
-              <a href="https://poke.idleworld.online/play" target="_blank" rel="noopener noreferrer">Abrir jogo em outra aba</a>
+              <span>Configure um site ou aplicativo para este painel.</span>
+              <a href="https://poke.idleworld.online/play" target="_blank" rel="noopener noreferrer">Abrir site em outra janela</a>
             </div>
           </div>
         </article>
@@ -188,6 +150,8 @@
               <button type="button" data-action="rename" aria-label="Renomear Conta 03" title="Renomear conta">✎</button>
               <button type="button" data-action="focus" aria-label="Focar Conta 03" title="Focar">⛶</button>
               <button type="button" data-action="open" aria-label="Abrir Conta 03 em nova aba" title="Abrir em nova aba">↗</button>
+              <button type="button" data-action="configure-app" aria-label="Configurar aplicativo da Conta 03" title="Configurar aplicativo instalado">⚙</button>
+              <button type="button" data-action="launch-app" aria-label="Iniciar aplicativo da Conta 03" title="Iniciar aplicativo">▶</button>
               <button type="button" data-action="hide" aria-label="Ocultar Conta 03" title="Ocultar">−</button>
             </div>
           </div>
@@ -202,8 +166,8 @@
             <div class="frame-placeholder">
               <span class="placeholder-icon">03</span>
               <strong>Janela isolada da Conta 03</strong>
-              <span>Inicie o aplicativo desktop para abrir o jogo nesta janela.</span>
-              <a href="https://poke.idleworld.online/play" target="_blank" rel="noopener noreferrer">Abrir jogo em outra aba</a>
+              <span>Configure um site ou aplicativo para este painel.</span>
+              <a href="https://poke.idleworld.online/play" target="_blank" rel="noopener noreferrer">Abrir site em outra janela</a>
             </div>
           </div>
         </article>
@@ -224,6 +188,8 @@
               <button type="button" data-action="rename" aria-label="Renomear Conta 04" title="Renomear conta">✎</button>
               <button type="button" data-action="focus" aria-label="Focar Conta 04" title="Focar">⛶</button>
               <button type="button" data-action="open" aria-label="Abrir Conta 04 em nova aba" title="Abrir em nova aba">↗</button>
+              <button type="button" data-action="configure-app" aria-label="Configurar aplicativo da Conta 04" title="Configurar aplicativo instalado">⚙</button>
+              <button type="button" data-action="launch-app" aria-label="Iniciar aplicativo da Conta 04" title="Iniciar aplicativo">▶</button>
               <button type="button" data-action="hide" aria-label="Ocultar Conta 04" title="Ocultar">−</button>
             </div>
           </div>
@@ -238,8 +204,8 @@
             <div class="frame-placeholder">
               <span class="placeholder-icon">04</span>
               <strong>Janela isolada da Conta 04</strong>
-              <span>Inicie o aplicativo desktop para abrir o jogo nesta janela.</span>
-              <a href="https://poke.idleworld.online/play" target="_blank" rel="noopener noreferrer">Abrir jogo em outra aba</a>
+              <span>Configure um site ou aplicativo para este painel.</span>
+              <a href="https://poke.idleworld.online/play" target="_blank" rel="noopener noreferrer">Abrir site em outra janela</a>
             </div>
           </div>
         </article>
@@ -250,7 +216,7 @@
         <form id="renameForm" method="dialog">
           <h2 id="renameTitle">Renomear conta</h2>
           <label for="renameInput">Nome exibido</label>
-          <input id="renameInput" name="accountName" type="text" maxlength="32" required autocomplete="off" />
+          <input id="renameInput" name="accountName" type="text" maxlength="32" autocomplete="off" />
           <div class="dialog-actions">
             <button class="ghost-btn" type="submit" value="cancel" formnovalidate>Cancelar</button>
             <button class="primary-btn" type="submit" value="save">Salvar nome</button>
@@ -260,18 +226,84 @@
 
       <dialog id="workspaceNameDialog" class="rename-dialog" aria-labelledby="workspaceNameTitle">
         <form id="workspaceNameForm" method="dialog">
-          <h2 id="workspaceNameTitle">Nome da aba de jogo</h2>
+          <h2 id="workspaceNameTitle">Nome da aba</h2>
           <label for="workspaceNameInput">Nome exibido na barra lateral</label>
-          <input id="workspaceNameInput" name="workspaceName" type="text" maxlength="40" required autocomplete="off" />
+          <input id="workspaceNameInput" name="workspaceName" type="text" maxlength="40" autocomplete="off" />
           <div class="dialog-actions">
             <button class="ghost-btn" type="submit" value="cancel" formnovalidate>Cancelar</button>
             <button class="primary-btn" type="submit" value="save">Salvar aba</button>
           </div>
         </form>
       </dialog>
+      <dialog id="programDialog" class="rename-dialog program-dialog" aria-labelledby="programDialogTitle">
+        <form id="programForm" method="dialog">
+          <h2 id="programDialogTitle">Aplicativo instalado</h2>
+          <p class="program-dialog-copy">Escolha um aplicativo para este painel.</p>
+          <label for="programPath">Executável do Windows (.exe)</label>
+          <div class="program-path-row"><input id="programPath" type="text" placeholder="Cole o caminho do .exe ou selecione um arquivo" /><button id="pickProgramBtn" class="ghost-btn" type="button">Procurar</button></div>
+          <label for="programArgs">Argumentos (opcional, um por linha)</label>
+          <textarea id="programArgs" rows="4" spellcheck="false" placeholder="--exemplo\nvalor"></textarea>
+          <label for="programWindowTitle">Título da janela (opcional)</label>
+          <input id="programWindowTitle" type="text" maxlength="128" placeholder="Ex.: Minecraft" />
+          <section class="open-window-picker" aria-label="Selecionar aplicativo já aberto">
+            <div class="open-window-picker-heading"><strong>Janelas abertas</strong><button id="refreshOpenWindowsBtn" class="ghost-btn" type="button">Atualizar</button></div>
+            <div id="openWindowList" class="open-window-list" role="listbox" aria-label="Janelas abertas no computador"><p class="open-window-empty">Atualize para procurar janelas abertas.</p></div>
+            <button id="attachOpenWindowBtn" class="toolbar-btn" type="button" disabled>Encaixar no painel</button>
+          </section>
+          <div class="dialog-actions">
+            <button class="ghost-btn" type="submit" value="cancel" formnovalidate>Cancelar</button>
+            <button class="primary-btn" type="submit" value="save">Salvar aplicativo</button>
+          </div>
+        </form>
+      </dialog>
+      <dialog id="noticeDialog" class="rename-dialog notice-dialog" aria-labelledby="noticeTitle" aria-describedby="noticeMessage">
+        <form method="dialog">
+          <span class="notice-mark" aria-hidden="true">✦</span>
+          <h2 id="noticeTitle">Sincronize</h2>
+          <p id="noticeMessage" class="notice-message"></p>
+          <div class="dialog-actions">
+            <button id="noticeCancel" class="ghost-btn" type="button">Cancelar</button>
+            <button id="noticeAccept" class="primary-btn" type="submit" value="accept">Entendi</button>
+          </div>
+        </form>
+      </dialog>
+      <dialog id="appearanceDialog" class="rename-dialog appearance-dialog" aria-labelledby="appearanceTitle">
+        <form method="dialog">
+          <h2 id="appearanceTitle">Personalizar interface</h2>
+          <p class="program-dialog-copy">Escolha uma organização para os painéis, navegação e controles. A preferência fica salva neste computador.</p>
+          <div id="appearanceOptions" class="appearance-options">
+            <button type="button" class="appearance-option" data-preset="aurora"><span class="appearance-swatch swatch-aurora"></span><span><strong>Aurora</strong><small>Perfil 1 · personalize cores e organização</small></span></button>
+            <button type="button" class="appearance-option" data-preset="oceano"><span class="appearance-swatch swatch-oceano"></span><span><strong>Oceano</strong><small>Perfil 2 · personalize cores e organização</small></span></button>
+            <button type="button" class="appearance-option" data-preset="brasa"><span class="appearance-swatch swatch-brasa"></span><span><strong>Brasa</strong><small>Perfil 3 · personalize cores e organização</small></span></button>
+            <button type="button" class="appearance-option" data-preset="claro"><span class="appearance-swatch swatch-claro"></span><span><strong>Claro</strong><small>Perfil 4 · personalize cores e organização</small></span></button>
+            <button type="button" class="appearance-option" data-preset="bosque"><span class="appearance-swatch swatch-bosque"></span><span><strong>Bosque</strong><small>Perfil 5 · personalize cores e organização</small></span></button>
+          </div>
+          <section class="appearance-editor" aria-label="Editar perfil selecionado">
+            <h3>Editar perfil selecionado</h3>
+            <label for="appearanceName">Nome do perfil</label>
+            <input id="appearanceName" type="text" maxlength="24" autocomplete="off" />
+            <div class="appearance-fields">
+              <label>Fundo <input id="appearanceBackground" type="color" /></label>
+              <label>Destaque <input id="appearanceAccent" type="color" /></label>
+              <label>Painéis <input id="appearanceSurface" type="color" /></label>
+              <label>Texto <input id="appearanceText" type="color" /></label>
+            </div>
+            <label for="appearanceDock">Posição da navegação</label>
+            <select id="appearanceDock"><option value="left">Lateral esquerda</option><option value="top">Barra superior</option><option value="right">Lateral direita</option><option value="rail">Trilho compacto</option><option value="bottom">Barra inferior</option></select>
+            <label for="appearanceControls">Posição dos controles principais</label>
+            <select id="appearanceControls"><option value="right">Ao lado do título</option><option value="below">Abaixo do título</option><option value="leading">Antes do resumo</option></select>
+            <label for="appearanceGap">Espaçamento entre painéis <output id="appearanceGapValue">8 px</output></label>
+            <input id="appearanceGap" type="range" min="2" max="24" step="1" />
+            <label for="appearanceRadius">Arredondamento dos painéis <output id="appearanceRadiusValue">13 px</output></label>
+            <input id="appearanceRadius" type="range" min="0" max="28" step="1" />
+            <button id="resetAppearanceBtn" class="ghost-btn" type="button">Restaurar este perfil</button>
+          </section>
+          <div class="dialog-actions"><button class="primary-btn" type="submit" value="close">Concluir</button></div>
+        </form>
+      </dialog>
     </div>
 
     <script src="app.js"></script>
-    <script src="resource-monitor.js"></script>
+    <script src="fps-monitor.js"></script>
   </body>
 </html>
