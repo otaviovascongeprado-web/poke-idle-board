@@ -43,6 +43,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--purple-brig
 .app-shell[data-layout="right"] > .workspace { grid-column: 1; grid-row: 1; padding: 20px 21px; }
 .app-shell[data-layout="right"] .topbar { align-items: flex-start; flex-direction: column; gap: 10px; }
 .app-shell[data-layout="right"] .topbar-right { width: 100%; justify-content: space-between; }
+.app-shell[data-layout="right"] .topbar-actions { transform: translateX(-76px); }
 .app-shell[data-layout="bottom"] { grid-template-columns: minmax(0,1fr); grid-template-rows: minmax(0,1fr) auto; }
 .app-shell[data-layout="bottom"] > .workspace { grid-row: 1; }
 .app-shell[data-layout="bottom"] > .sidebar { grid-row: 2; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 9px; padding: 10px 15px; border: 0; border-top: 1px solid var(--line); }
