@@ -8,9 +8,6 @@ public static class SincronizeWindowApi {
   private static readonly Dictionary<IntPtr, uint[]> attachedInputThreads = new Dictionary<IntPtr, uint[]>();
   [StructLayout(LayoutKind.Sequential)] public struct RECT { public int Left, Top, Right, Bottom; }
   [DllImport("user32.dll", SetLastError=true)] public static extern bool GetWindowRect(IntPtr hWnd, out RECT rect);
-  [DllImport("user32.dll", EntryPoint="CreateWindowExW", CharSet=CharSet.Unicode, SetLastError=true)] private static extern IntPtr CreateWindowEx(uint exStyle, string className, string windowName, uint style, int x, int y, int width, int height, IntPtr parent, IntPtr menu, IntPtr instance, IntPtr param);
-  [DllImport("kernel32.dll", EntryPoint="GetModuleHandleW", CharSet=CharSet.Unicode)] private static extern IntPtr GetModuleHandle(string moduleName);
-  [DllImport("user32.dll", SetLastError=true)] public static extern bool DestroyWindow(IntPtr hWnd);
   [DllImport("user32.dll", SetLastError=true)] public static extern IntPtr SetParent(IntPtr child, IntPtr parent);
   [DllImport("user32.dll")] public static extern IntPtr GetParent(IntPtr child);
   [DllImport("kernel32.dll", EntryPoint="SetLastError")] private static extern void ResetLastError(uint value);
@@ -34,8 +31,6 @@ public static class SincronizeWindowApi {
   [DllImport("user32.dll", EntryPoint="SetWindowPos", SetLastError=true)] private static extern bool SetWindowPosEx(IntPtr hWnd, IntPtr after, int x, int y, int width, int height, uint flags);
   [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
   [DllImport("user32.dll", SetLastError=true)] private static extern bool AttachThreadInput(uint attach, uint attachTo, bool attachInput);
-  [DllImport("user32.dll")] private static extern IntPtr SetFocus(IntPtr hWnd);
-  [DllImport("kernel32.dll")] private static extern uint GetCurrentThreadId();
   private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
   [DllImport("user32.dll")] private static extern bool EnumWindows(EnumWindowsProc callback, IntPtr lParam);
   public static long[] GetVisibleWindowHandles() {
@@ -54,29 +49,20 @@ public static class SincronizeWindowApi {
     return text.ToString();
   }
   public static uint GetProcessId(IntPtr hWnd) { uint pid; GetWindowThreadProcessId(hWnd, out pid); return pid; }
-  public static bool ConnectInput(IntPtr child, IntPtr host, IntPtr owner) {
-    uint childPid, hostPid, ownerPid;
+  public static bool ConnectInput(IntPtr child, IntPtr owner) {
+    uint childPid, ownerPid;
     uint childThread = GetWindowThreadProcessId(child, out childPid);
-    uint[] candidates = new uint[] { GetWindowThreadProcessId(host, out hostPid), GetWindowThreadProcessId(owner, out ownerPid), GetCurrentThreadId() };
-    var connected = new List<uint>();
-    foreach (uint thread in candidates) {
-      if (thread == 0 || thread == childThread || connected.Contains(thread)) continue;
-      if (!AttachThreadInput(childThread, thread, true)) {
-        foreach (uint previous in connected) AttachThreadInput(childThread, previous, false);
-        return false;
-      }
-      connected.Add(thread);
-    }
-    connected.Insert(0, childThread);
-    attachedInputThreads[child] = connected.ToArray();
-    SetFocus(child);
+    uint ownerThread = GetWindowThreadProcessId(owner, out ownerPid);
+    if (childThread == 0 || ownerThread == 0 || childThread == ownerThread) return true;
+    if (!AttachThreadInput(childThread, ownerThread, true)) return false;
+    attachedInputThreads[child] = new uint[] { childThread, ownerThread };
+    // Do not force focus here; clicking a pane should choose between its app and the board.
     return true;
   }
   public static void DisconnectInput(IntPtr child) {
     uint[] connected;
     if (!attachedInputThreads.TryGetValue(child, out connected)) return;
-    uint childThread = connected[0];
-    for (int index = 1; index < connected.Length; index++) AttachThreadInput(childThread, connected[index], false);
+    if (connected.Length >= 2) AttachThreadInput(connected[0], connected[1], false);
     attachedInputThreads.Remove(child);
   }
   public static long GetStyle(IntPtr hWnd) {
@@ -90,13 +76,6 @@ public static class SincronizeWindowApi {
     long style = originalStyle & ~0x80000000L & ~chrome;
     style |= 0x40000000L | 0x10000000L | 0x02000000L | 0x04000000L;
     SetStyle(hWnd, style);
-  }
-  public static IntPtr CreateHost(IntPtr parent, int x, int y, int width, int height, bool visible) {
-    const uint CHILD=0x40000000, CLIPCHILDREN=0x02000000, CLIPSIBLINGS=0x04000000, VISIBLE=0x10000000, BLACKRECT=0x00000004;
-    uint style = CHILD | CLIPCHILDREN | CLIPSIBLINGS | BLACKRECT | (visible ? VISIBLE : 0);
-    IntPtr host = CreateWindowEx(0, "STATIC", "", style, x, y, Math.Max(1,width), Math.Max(1,height), parent, IntPtr.Zero, GetModuleHandle(null), IntPtr.Zero);
-    if (host == IntPtr.Zero) throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error(), "O Windows não conseguiu criar o contêiner do painel.");
-    return host;
   }
   public static bool Place(IntPtr hWnd, int x, int y, int width, int height, bool visible) {
     const uint NOACTIVATE = 0x0010, NOOWNERZORDER = 0x0200;
@@ -190,21 +169,6 @@ while ($null -ne ($line = [Console]::In.ReadLine())) {
       'isWindow' { $result = [SincronizeWindowApi]::IsWindow([IntPtr]([Int64]$request.hwnd)) }
       'disconnectInput' { [SincronizeWindowApi]::DisconnectInput([IntPtr]([Int64]$request.hwnd)); $result = $true }
       'closeWindow' { $result = [SincronizeWindowApi]::PostMessage([IntPtr]([Int64]$request.hwnd), 0x0010, [IntPtr]::Zero, [IntPtr]::Zero) }
-      'createHost' {
-        $parent = [IntPtr]([Int64]$request.parent)
-        if (-not [SincronizeWindowApi]::IsWindow($parent)) { throw 'A janela principal não está disponível para criar o contêiner do painel.' }
-        $hostHwnd = [SincronizeWindowApi]::CreateHost($parent, [int]$request.x, [int]$request.y, [int]$request.width, [int]$request.height, [bool]$request.visible)
-        $result = @{ hwnd=[string]$hostHwnd.ToInt64() }
-      }
-      'positionHost' {
-        $hostHwnd = [IntPtr]([Int64]$request.hwnd)
-        $ok = [SincronizeWindowApi]::Place($hostHwnd, [int]$request.x, [int]$request.y, [int]$request.width, [int]$request.height, [bool]$request.visible)
-        $result = @{ ok=$ok }
-      }
-      'destroyHost' {
-        $hostHwnd = [IntPtr]([Int64]$request.hwnd)
-        $result = [SincronizeWindowApi]::DestroyWindow($hostHwnd)
-      }
       'attach' {
         $child = [IntPtr]([Int64]$request.hwnd)
         $parent = [IntPtr]([Int64]$request.parent)
@@ -212,7 +176,7 @@ while ($null -ne ($line = [Console]::In.ReadLine())) {
         if (-not [SincronizeWindowApi]::IsWindow($child)) { throw 'A janela selecionada já foi fechada.' }
         [SincronizeWindowApi]::SetChildStyle($child, [Int64]$request.style)
         if (-not [SincronizeWindowApi]::ChangeParent($child, $parent)) { throw 'O Windows recusou o encaixe desta janela. Aplicativos elevados ou com renderização exclusiva podem não permitir incorporação.' }
-        if (-not [SincronizeWindowApi]::ConnectInput($child, $parent, $owner)) {
+        if (-not [SincronizeWindowApi]::ConnectInput($child, $owner)) {
           [void][SincronizeWindowApi]::ChangeParent($child, [IntPtr]([Int64]$request.originalParent))
           [SincronizeWindowApi]::SetStyle($child, [Int64]$request.style)
           throw 'O Windows não permitiu encaminhar teclado e mouse para este aplicativo.'

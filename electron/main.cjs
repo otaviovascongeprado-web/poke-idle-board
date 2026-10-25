@@ -98,38 +98,17 @@ function nativeBounds(entry, visibleOverride) {
     visible
   };
 }
-function nativeChildBounds(entry, visibleOverride) {
-  const bounds = nativeBounds(entry, visibleOverride);
-  return { x: 0, y: 0, width: bounds.width, height: bounds.height, visible: bounds.visible };
-}
 async function positionNativeEntry(entry, visibleOverride) {
-  if (!entry.hostHwnd || !entry.hwnd) return { ok: false };
-  const bounds = nativeBounds(entry, visibleOverride);
-  const hostResult = await nativeWindows.positionHost(entry.hostHwnd, bounds);
-  if (!hostResult?.ok) return hostResult;
-  return nativeWindows.position(entry.hwnd, nativeChildBounds(entry, visibleOverride));
+  if (!entry.hwnd) return { ok: false };
+  return nativeWindows.position(entry.hwnd, nativeBounds(entry, visibleOverride));
 }
 async function hideNativeEntry(entry) {
-  if (entry.hostHwnd) {
-    const bounds = nativeBounds(entry, false);
-    return nativeWindows.positionHost(entry.hostHwnd, bounds);
-  }
-  if (entry.hwnd) return nativeWindows.position(entry.hwnd, { x: -10000, y: -10000, width: 800, height: 600, visible: false });
+  if (entry.hwnd) return nativeWindows.position(entry.hwnd, nativeBounds(entry, false));
   return { ok: true };
 }
-function destroyNativeHost(entry) {
-  if (!entry.hostHwnd) return;
-  const hostHwnd = entry.hostHwnd;
-  entry.hostHwnd = null;
-  nativeWindows.destroyHost(hostHwnd).catch(() => {});
-}
-async function createNativeHost(entry) {
+function mainWindowHandle() {
   const windowHandle = mainWindow.getNativeWindowHandle();
-  const parent = windowHandle.length >= 8 ? windowHandle.readBigUInt64LE().toString() : String(windowHandle.readUInt32LE());
-  if (!await nativeWindows.isWindow(parent)) throw new Error('A janela principal do Sincronize não está disponível para encaixe.');
-  entry.hostWindowHandle = parent;
-  entry.hostHwnd = await nativeWindows.createHost(parent, nativeBounds(entry, false));
-  if (!entry.hostHwnd) throw new Error('Não foi possível criar a área isolada do painel.');
+  return windowHandle.length >= 8 ? windowHandle.readBigUInt64LE().toString() : String(windowHandle.readUInt32LE());
 }
 async function attachNativeWindow(entry, candidate) {
   if (String(candidate.pid) === String(process.pid)) throw new Error('Não é possível encaixar uma janela do próprio Sincronize.');
@@ -139,8 +118,9 @@ async function attachNativeWindow(entry, candidate) {
   entry.originalStyle = String(candidate.style || 0);
   entry.originalParent = String(candidate.parent || 0);
   reservedNativeHandles.add(entry.hwnd);
-  await createNativeHost(entry);
-  const result = await nativeWindows.attach(entry.hwnd, entry.hostHwnd, nativeChildBounds(entry, false), entry.originalStyle, entry.hostWindowHandle, entry.originalParent);
+  const parent = mainWindowHandle();
+  if (!await nativeWindows.isWindow(parent)) throw new Error('A janela principal do Sincronize não está disponível para encaixe.');
+  const result = await nativeWindows.attach(entry.hwnd, parent, nativeBounds(entry, false), entry.originalStyle, parent, entry.originalParent);
   if (!result?.ok) throw new Error('O Windows não conseguiu posicionar a janela dentro do painel.');
   const positioned = await positionNativeEntry(entry);
   if (!positioned?.ok) throw new Error('O Windows não conseguiu ajustar a janela ao tamanho do painel.');
@@ -220,7 +200,6 @@ async function pollNativeAppWindow(entry) {
       reservedNativeHandles.delete(entry.hwnd);
       entry.hwnd = null;
     }
-    destroyNativeHost(entry);
     sendNativeStatus(entry.workspaceId, entry.accountIndex, 'warning', `Não foi possível encaixar a janela: ${error.message}`);
   } finally {
     entry.polling = false;
@@ -231,7 +210,6 @@ function finishNativeProgram(entry, state, message) {
   if (entry.hwnd) nativeWindows.disconnectInput(entry.hwnd).catch(() => {});
   if (entry.hwnd) reservedNativeHandles.delete(entry.hwnd);
   nativeApps.delete(entry.key);
-  destroyNativeHost(entry);
   sendNativeStatus(entry.workspaceId, entry.accountIndex, state, message);
 }
 async function launchNativeProgram(workspaceId, accountIndex, executable, args, windowTitle = '') {
@@ -371,7 +349,6 @@ async function attachExistingWindow(workspaceId, accountIndex, hwnd) {
   } catch (error) {
     try { if (entry.hwnd && await nativeWindows.isWindow(entry.hwnd)) await nativeWindows.detach(entry.hwnd, entry.originalBounds, entry.originalStyle, entry.originalParent); } catch {}
     reservedNativeHandles.delete(entry.hwnd);
-    destroyNativeHost(entry);
     nativeApps.delete(key);
     return { ok: false, error: error.message };
   }
@@ -383,10 +360,6 @@ async function detachNativeApps() {
     if (entry.hwnd && entry.originalBounds) {
       try { await nativeWindows.detach(entry.hwnd, entry.originalBounds, entry.originalStyle, entry.originalParent); } catch {}
       reservedNativeHandles.delete(entry.hwnd);
-    }
-    if (entry.hostHwnd) {
-      try { await nativeWindows.destroyHost(entry.hostHwnd); } catch {}
-      entry.hostHwnd = null;
     }
   }));
   nativeWindows.close();
@@ -470,7 +443,7 @@ function setPaneLayout(workspaceId, layout) {
         if (view && !view.webContents.isDestroyed()) view.setVisible(false);
       });
     }
-    for (const entry of nativeApps.values()) if (entry.hostHwnd) hideNativeEntry(entry).catch(() => {});
+    for (const entry of nativeApps.values()) if (entry.hwnd) hideNativeEntry(entry).catch(() => {});
     return;
   }
 
@@ -485,7 +458,7 @@ function setPaneLayout(workspaceId, layout) {
     });
   }
   for (const entry of nativeApps.values()) {
-    if (entry.workspaceId !== workspaceId && entry.hostHwnd) {
+    if (entry.workspaceId !== workspaceId && entry.hwnd) {
       hideNativeEntry(entry).catch(() => {});
     }
   }
@@ -515,7 +488,7 @@ function setPaneLayout(workspaceId, layout) {
       }
       return;
     }
-    if (appEntry?.hostHwnd) hideNativeEntry(appEntry).catch(() => {});
+    if (appEntry?.hwnd) hideNativeEntry(appEntry).catch(() => {});
     
     // Lazy creation: only instantiate WebContentsView if visible or already exists or has URL configured
     const configuredUrl = urlsByWorkspace.get(workspaceId)?.[accountIndex];
@@ -560,7 +533,7 @@ function setOverlayOpenFromRenderer(event, isOpen) {
         if (view && !view.webContents.isDestroyed()) view.setVisible(false);
       });
     }
-    for (const entry of nativeApps.values()) if (entry.hostHwnd) hideNativeEntry(entry).catch(() => {});
+    for (const entry of nativeApps.values()) if (entry.hwnd) hideNativeEntry(entry).catch(() => {});
     return;
   }
   const layout = lastLayoutWorkspaceId && layoutsByWorkspace.get(lastLayoutWorkspaceId);

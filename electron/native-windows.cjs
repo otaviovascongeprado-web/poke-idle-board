@@ -73,12 +73,6 @@ module.exports = Object.freeze({
     const processIds = await request('processTree', { pid });
     return Array.isArray(processIds) ? processIds.map(Number).filter(Number.isFinite) : [];
   },
-  async createHost(parent, bounds) {
-    const result = await request('createHost', { parent, ...bounds });
-    return result?.hwnd ? String(result.hwnd) : null;
-  },
-  positionHost(hwnd, bounds) { return request('positionHost', { hwnd, ...bounds }); },
-  destroyHost(hwnd) { return request('destroyHost', { hwnd }); },
   isWindow(hwnd) { return request('isWindow', { hwnd }); },
   disconnectInput(hwnd) { return request('disconnectInput', { hwnd }); },
   closeWindow(hwnd) { return request('closeWindow', { hwnd }); },
