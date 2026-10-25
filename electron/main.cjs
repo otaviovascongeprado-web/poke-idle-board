@@ -104,7 +104,7 @@ async function positionNativeEntry(entry, visibleOverride) {
   return nativeWindows.ensureEmbedded(entry.hwnd, parent, nativeBounds(entry, visibleOverride), entry.originalStyle);
 }
 async function hideNativeEntry(entry) {
-  if (entry.hwnd) return nativeWindows.position(entry.hwnd, nativeBounds(entry, false));
+  if (entry.hwnd) return nativeWindows.position(entry.hwnd, mainWindowHandle(), nativeBounds(entry, false));
   return { ok: true };
 }
 function mainWindowHandle() {

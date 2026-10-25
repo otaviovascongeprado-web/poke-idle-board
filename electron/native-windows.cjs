@@ -78,7 +78,7 @@ module.exports = Object.freeze({
   disconnectInput(hwnd) { return request('disconnectInput', { hwnd }); },
   closeWindow(hwnd) { return request('closeWindow', { hwnd }); },
   attach(hwnd, parent, bounds, style, owner = '0', originalParent = '0') { return request('attach', { hwnd, parent, owner, originalParent, style, ...bounds }); },
-  position(hwnd, bounds) { return request('position', { hwnd, ...bounds }); },
+  position(hwnd, owner, bounds) { return request('position', { hwnd, owner, ...bounds }); },
   detach(hwnd, bounds, style, parent = '0') { return request('detach', { hwnd, style, parent, ...bounds }); },
   close() {
     if (helper && !helper.killed) helper.kill();

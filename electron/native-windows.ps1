@@ -8,18 +8,19 @@ public static class SincronizeWindowApi {
   private static readonly Dictionary<IntPtr, uint[]> attachedInputThreads = new Dictionary<IntPtr, uint[]>();
   [StructLayout(LayoutKind.Sequential)] public struct RECT { public int Left, Top, Right, Bottom; }
   [DllImport("user32.dll", SetLastError=true)] public static extern bool GetWindowRect(IntPtr hWnd, out RECT rect);
-  [DllImport("user32.dll", SetLastError=true)] public static extern IntPtr SetParent(IntPtr child, IntPtr parent);
   [DllImport("user32.dll")] public static extern IntPtr GetParent(IntPtr child);
   [DllImport("kernel32.dll", EntryPoint="SetLastError")] private static extern void ResetLastError(uint value);
-  public static bool ChangeParent(IntPtr child, IntPtr parent) {
+  public static bool ChangeOwner(IntPtr child, IntPtr owner) {
     ResetLastError(0);
-    SetParent(child, parent);
-    return Marshal.GetLastWin32Error() == 0 && GetParent(child) == parent;
+    if (IntPtr.Size == 8) SetWindowLongPtr64(child, -8, owner); else SetWindowLong32(child, -8, owner.ToInt32());
+    return Marshal.GetLastWin32Error() == 0 && GetParent(child) == owner;
   }
   [DllImport("user32.dll", EntryPoint="GetWindowLongPtrW", SetLastError=true)] private static extern IntPtr GetWindowLongPtr64(IntPtr hWnd, int index);
   [DllImport("user32.dll", EntryPoint="SetWindowLongPtrW", SetLastError=true)] private static extern IntPtr SetWindowLongPtr64(IntPtr hWnd, int index, IntPtr value);
   [DllImport("user32.dll", EntryPoint="GetWindowLongW", SetLastError=true)] private static extern int GetWindowLong32(IntPtr hWnd, int index);
   [DllImport("user32.dll", EntryPoint="SetWindowLongW", SetLastError=true)] private static extern int SetWindowLong32(IntPtr hWnd, int index, int value);
+  [StructLayout(LayoutKind.Sequential)] public struct POINT { public int X, Y; }
+  [DllImport("user32.dll", SetLastError=true)] private static extern bool ClientToScreen(IntPtr hWnd, ref POINT point);
   [DllImport("user32.dll", SetLastError=true)] public static extern bool SetWindowPos(IntPtr hWnd, IntPtr after, int x, int y, int width, int height, uint flags);
   [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr hWnd, int command);
   [DllImport("user32.dll", SetLastError=true)] public static extern bool RedrawWindow(IntPtr hWnd, IntPtr updateRect, IntPtr updateRegion, uint flags);
@@ -28,12 +29,13 @@ public static class SincronizeWindowApi {
   [DllImport("user32.dll", CharSet=CharSet.Unicode)] private static extern int GetWindowTextLengthW(IntPtr hWnd);
   [DllImport("user32.dll", CharSet=CharSet.Unicode)] private static extern int GetWindowTextW(IntPtr hWnd, System.Text.StringBuilder text, int maxCount);
   [DllImport("user32.dll")] private static extern bool IsWindowVisible(IntPtr hWnd);
-  [DllImport("user32.dll", SetLastError=true)] private static extern int MapWindowPoints(IntPtr from, IntPtr to, ref RECT points, uint pointCount);
   [DllImport("user32.dll", EntryPoint="SetWindowPos", SetLastError=true)] private static extern bool SetWindowPosEx(IntPtr hWnd, IntPtr after, int x, int y, int width, int height, uint flags);
+  [DllImport("user32.dll", SetLastError=true)] private static extern IntPtr SetThreadDpiAwarenessContext(IntPtr context);
   [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
   [DllImport("user32.dll", SetLastError=true)] private static extern bool AttachThreadInput(uint attach, uint attachTo, bool attachInput);
   [DllImport("user32.dll")] private static extern IntPtr SetFocus(IntPtr hWnd);
   [DllImport("user32.dll")] private static extern IntPtr GetFocus();
+  [DllImport("user32.dll")] private static extern bool SetForegroundWindow(IntPtr hWnd);
   [DllImport("user32.dll")] private static extern uint GetQueueStatus(uint flags);
   [DllImport("kernel32.dll")] private static extern uint GetCurrentThreadId();
   private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
@@ -76,17 +78,24 @@ public static class SincronizeWindowApi {
   public static void SetStyle(IntPtr hWnd, long style) {
     if (IntPtr.Size == 8) SetWindowLongPtr64(hWnd, -16, new IntPtr(style)); else SetWindowLong32(hWnd, -16, unchecked((int)style));
   }
-  public static void SetChildStyle(IntPtr hWnd, long originalStyle) {
+  public static void UsePerMonitorDpi() { SetThreadDpiAwarenessContext(new IntPtr(-4)); }
+  public static void SetOwnedStyle(IntPtr hWnd, long originalStyle) {
     const long chrome = 0x00C00000L | 0x00040000L | 0x00080000L | 0x00020000L | 0x00010000L;
-    long style = originalStyle & ~0x80000000L & ~chrome;
-    style |= 0x40000000L | 0x10000000L | 0x02000000L | 0x04000000L;
+    long style = originalStyle & ~0x40000000L & ~chrome;
+    style |= 0x80000000L | 0x10000000L | 0x02000000L | 0x04000000L;
     SetStyle(hWnd, style);
+    SetWindowPosEx(hWnd, IntPtr.Zero, 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0004 | 0x0010 | 0x0020);
   }
   public static bool Place(IntPtr hWnd, int x, int y, int width, int height, bool visible) {
     const uint NOACTIVATE = 0x0010, NOOWNERZORDER = 0x0200;
-    bool placed = SetWindowPosEx(hWnd, IntPtr.Zero, x, y, Math.Max(1, width), Math.Max(1, height), NOACTIVATE | NOOWNERZORDER);
+    bool placed = SetWindowPosEx(hWnd, new IntPtr(-2), x, y, Math.Max(1, width), Math.Max(1, height), NOACTIVATE | NOOWNERZORDER);
     ShowWindow(hWnd, visible ? 4 : 0);
     return placed;
+  }
+  public static bool Place(IntPtr hWnd, IntPtr owner, int x, int y, int width, int height, bool visible) {
+    var point = new POINT { X=x, Y=y };
+    if (!ClientToScreen(owner, ref point)) return false;
+    return Place(hWnd, point.X, point.Y, width, height, visible);
   }
   public static bool FocusChild(IntPtr child, IntPtr owner) {
     if (!IsWindow(child) || !IsWindow(owner)) return false;
@@ -102,6 +111,7 @@ public static class SincronizeWindowApi {
         if (!AttachThreadInput(helperThread, childThread, true)) return false;
         attached.Add(childThread);
       }
+      SetForegroundWindow(child);
       SetFocus(child);
       return GetFocus() == child;
     } finally {
@@ -111,19 +121,21 @@ public static class SincronizeWindowApi {
   public static bool EnsureEmbedded(IntPtr child, IntPtr parent, long originalStyle, int x, int y, int width, int height, bool visible) {
     if (!IsWindow(child) || !IsWindow(parent)) return false;
     long style = GetStyle(child);
-    bool repaired = GetParent(child) != parent || (style & 0x40000000L) == 0 || (style & 0x80000000L) != 0;
+    bool repaired = GetParent(child) != parent || (style & 0x40000000L) != 0 || (style & 0x80000000L) == 0;
     if (repaired) {
-      SetChildStyle(child, originalStyle);
-      if (GetParent(child) != parent && !ChangeParent(child, parent)) return false;
+      SetOwnedStyle(child, originalStyle);
+      if (GetParent(child) != parent && !ChangeOwner(child, parent)) return false;
     }
     var rect = new RECT();
     bool matches = GetWindowRect(child, out rect);
     if (matches) {
-      MapWindowPoints(IntPtr.Zero, parent, ref rect, 2);
-      matches = rect.Left == x && rect.Top == y && rect.Right - rect.Left == Math.Max(1, width) && rect.Bottom - rect.Top == Math.Max(1, height);
+      var point = new POINT { X=x, Y=y };
+      matches = ClientToScreen(parent, ref point)
+        && rect.Left == point.X && rect.Top == point.Y
+        && rect.Right - rect.Left == Math.Max(1, width) && rect.Bottom - rect.Top == Math.Max(1, height);
     }
     if (repaired || !matches) {
-      bool placed = Place(child, x, y, width, height, visible);
+      bool placed = Place(child, parent, x, y, width, height, visible);
       if (placed && repaired && visible) FocusChild(child, parent);
       return placed;
     }
@@ -132,6 +144,7 @@ public static class SincronizeWindowApi {
   }
 }
 '@ -ErrorAction Stop
+  [SincronizeWindowApi]::UsePerMonitorDpi()
 } catch {
   [Console]::Error.WriteLine($_.Exception.Message)
   exit 1
@@ -220,15 +233,16 @@ while ($null -ne ($line = [Console]::In.ReadLine())) {
         $parent = [IntPtr]([Int64]$request.parent)
         $owner = [IntPtr]([Int64]$request.owner)
         if (-not [SincronizeWindowApi]::IsWindow($child)) { throw 'A janela selecionada já foi fechada.' }
-        [SincronizeWindowApi]::SetChildStyle($child, [Int64]$request.style)
-        if (-not [SincronizeWindowApi]::ChangeParent($child, $parent)) { throw 'O Windows recusou o encaixe desta janela. Aplicativos elevados ou com renderização exclusiva podem não permitir incorporação.' }
-        $ok = [SincronizeWindowApi]::Place($child, [int]$request.x, [int]$request.y, [int]$request.width, [int]$request.height, [bool]$request.visible)
-        if (-not $ok -or -not [SincronizeWindowApi]::ConnectInput($child, $owner) -or -not [SincronizeWindowApi]::FocusChild($child, $owner)) {
+        [SincronizeWindowApi]::SetOwnedStyle($child, [Int64]$request.style)
+        if (-not [SincronizeWindowApi]::ChangeOwner($child, $owner)) { throw 'O Windows recusou o vínculo desta janela ao painel.' }
+        $ok = [SincronizeWindowApi]::Place($child, $owner, [int]$request.x, [int]$request.y, [int]$request.width, [int]$request.height, [bool]$request.visible)
+        if (-not $ok -or -not [SincronizeWindowApi]::ConnectInput($child, $owner)) {
           [SincronizeWindowApi]::DisconnectInput($child)
-          [void][SincronizeWindowApi]::ChangeParent($child, [IntPtr]([Int64]$request.originalParent))
+          [void][SincronizeWindowApi]::ChangeOwner($child, [IntPtr]([Int64]$request.originalParent))
           [SincronizeWindowApi]::SetStyle($child, [Int64]$request.style)
-          throw 'O Windows não permitiu ativar o teclado neste aplicativo encaixado.'
+          throw 'O Windows não permitiu vincular esta janela ao painel.'
         }
+        [void][SincronizeWindowApi]::FocusChild($child, $owner)
         $result = @{ ok=$ok }
       }
       'ensureEmbedded' {
@@ -239,13 +253,14 @@ while ($null -ne ($line = [Console]::In.ReadLine())) {
       }
       'position' {
         $child = [IntPtr]([Int64]$request.hwnd)
-        $ok = [SincronizeWindowApi]::Place($child, [int]$request.x, [int]$request.y, [int]$request.width, [int]$request.height, [bool]$request.visible)
+        $owner = [IntPtr]([Int64]$request.owner)
+        $ok = [SincronizeWindowApi]::Place($child, $owner, [int]$request.x, [int]$request.y, [int]$request.width, [int]$request.height, [bool]$request.visible)
         $result = @{ ok=$ok }
       }
       'detach' {
         $child = [IntPtr]([Int64]$request.hwnd)
         [SincronizeWindowApi]::DisconnectInput($child)
-        [void][SincronizeWindowApi]::ChangeParent($child, [IntPtr]([Int64]$request.parent))
+        [void][SincronizeWindowApi]::ChangeOwner($child, [IntPtr]([Int64]$request.parent))
         [SincronizeWindowApi]::SetStyle($child, [Int64]$request.style)
         $ok = [SincronizeWindowApi]::Place($child, [int]$request.x, [int]$request.y, [int]$request.width, [int]$request.height, $true)
         $result = @{ ok=$ok }
