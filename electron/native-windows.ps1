@@ -28,9 +28,13 @@ public static class SincronizeWindowApi {
   [DllImport("user32.dll", CharSet=CharSet.Unicode)] private static extern int GetWindowTextLengthW(IntPtr hWnd);
   [DllImport("user32.dll", CharSet=CharSet.Unicode)] private static extern int GetWindowTextW(IntPtr hWnd, System.Text.StringBuilder text, int maxCount);
   [DllImport("user32.dll")] private static extern bool IsWindowVisible(IntPtr hWnd);
+  [DllImport("user32.dll", SetLastError=true)] private static extern int MapWindowPoints(IntPtr from, IntPtr to, ref RECT points, uint pointCount);
   [DllImport("user32.dll", EntryPoint="SetWindowPos", SetLastError=true)] private static extern bool SetWindowPosEx(IntPtr hWnd, IntPtr after, int x, int y, int width, int height, uint flags);
   [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
   [DllImport("user32.dll", SetLastError=true)] private static extern bool AttachThreadInput(uint attach, uint attachTo, bool attachInput);
+  [DllImport("user32.dll")] private static extern IntPtr SetFocus(IntPtr hWnd);
+  [DllImport("user32.dll")] private static extern IntPtr GetFocus();
+  [DllImport("kernel32.dll")] private static extern uint GetCurrentThreadId();
   private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
   [DllImport("user32.dll")] private static extern bool EnumWindows(EnumWindowsProc callback, IntPtr lParam);
   public static long[] GetVisibleWindowHandles() {
@@ -79,10 +83,50 @@ public static class SincronizeWindowApi {
   }
   public static bool Place(IntPtr hWnd, int x, int y, int width, int height, bool visible) {
     const uint NOACTIVATE = 0x0010, NOOWNERZORDER = 0x0200;
-    bool placed = SetWindowPosEx(hWnd, IntPtr.Zero, x, y, Math.Max(1, width), Math.Max(1, height), NOACTIVATE | NOOWNERZORDER | 0x0020);
+    bool placed = SetWindowPosEx(hWnd, IntPtr.Zero, x, y, Math.Max(1, width), Math.Max(1, height), NOACTIVATE | NOOWNERZORDER);
     ShowWindow(hWnd, visible ? 4 : 0);
-    if (visible) RedrawWindow(hWnd, IntPtr.Zero, IntPtr.Zero, 0x0001 | 0x0080 | 0x0100);
     return placed;
+  }
+  public static bool FocusChild(IntPtr child, IntPtr owner) {
+    if (!IsWindow(child) || !IsWindow(owner)) return false;
+    uint childPid, ownerPid;
+    uint childThread = GetWindowThreadProcessId(child, out childPid);
+    uint ownerThread = GetWindowThreadProcessId(owner, out ownerPid);
+    uint helperThread = GetCurrentThreadId();
+    var attached = new List<uint>();
+    try {
+      if (childThread == 0) return false;
+      if (childThread != helperThread) {
+        if (!AttachThreadInput(helperThread, childThread, true)) return false;
+        attached.Add(childThread);
+      }
+      SetFocus(child);
+      return GetFocus() == child;
+    } finally {
+      for (int index = attached.Count - 1; index >= 0; index--) AttachThreadInput(helperThread, attached[index], false);
+    }
+  }
+  public static bool EnsureEmbedded(IntPtr child, IntPtr parent, long originalStyle, int x, int y, int width, int height, bool visible) {
+    if (!IsWindow(child) || !IsWindow(parent)) return false;
+    long style = GetStyle(child);
+    bool repaired = GetParent(child) != parent || (style & 0x40000000L) == 0 || (style & 0x80000000L) != 0;
+    if (repaired) {
+      SetChildStyle(child, originalStyle);
+      if (GetParent(child) != parent && !ChangeParent(child, parent)) return false;
+    }
+    var rect = new RECT();
+    bool matches = GetWindowRect(child, out rect);
+    if (matches) {
+      MapWindowPoints(IntPtr.Zero, parent, ref rect, 2);
+      matches = rect.Left == x && rect.Top == y && rect.Right - rect.Left == Math.Max(1, width) && rect.Bottom - rect.Top == Math.Max(1, height);
+    }
+    if (repaired || !matches) {
+      bool placed = Place(child, x, y, width, height, visible);
+      if (placed && repaired && visible) FocusChild(child, parent);
+      return placed;
+    }
+    if (IsWindowVisible(child) != visible) ShowWindow(child, visible ? 4 : 0);
+    return true;
   }
 }
 '@ -ErrorAction Stop
@@ -176,12 +220,19 @@ while ($null -ne ($line = [Console]::In.ReadLine())) {
         if (-not [SincronizeWindowApi]::IsWindow($child)) { throw 'A janela selecionada já foi fechada.' }
         [SincronizeWindowApi]::SetChildStyle($child, [Int64]$request.style)
         if (-not [SincronizeWindowApi]::ChangeParent($child, $parent)) { throw 'O Windows recusou o encaixe desta janela. Aplicativos elevados ou com renderização exclusiva podem não permitir incorporação.' }
-        if (-not [SincronizeWindowApi]::ConnectInput($child, $owner)) {
+        $ok = [SincronizeWindowApi]::Place($child, [int]$request.x, [int]$request.y, [int]$request.width, [int]$request.height, [bool]$request.visible)
+        if (-not $ok -or -not [SincronizeWindowApi]::ConnectInput($child, $owner) -or -not [SincronizeWindowApi]::FocusChild($child, $owner)) {
+          [SincronizeWindowApi]::DisconnectInput($child)
           [void][SincronizeWindowApi]::ChangeParent($child, [IntPtr]([Int64]$request.originalParent))
           [SincronizeWindowApi]::SetStyle($child, [Int64]$request.style)
-          throw 'O Windows não permitiu encaminhar teclado e mouse para este aplicativo.'
+          throw 'O Windows não permitiu ativar o teclado neste aplicativo encaixado.'
         }
-        $ok = [SincronizeWindowApi]::Place($child, [int]$request.x, [int]$request.y, [int]$request.width, [int]$request.height, [bool]$request.visible)
+        $result = @{ ok=$ok }
+      }
+      'ensureEmbedded' {
+        $child = [IntPtr]([Int64]$request.hwnd)
+        $parent = [IntPtr]([Int64]$request.parent)
+        $ok = [SincronizeWindowApi]::EnsureEmbedded($child, $parent, [Int64]$request.style, [int]$request.x, [int]$request.y, [int]$request.width, [int]$request.height, [bool]$request.visible)
         $result = @{ ok=$ok }
       }
       'position' {

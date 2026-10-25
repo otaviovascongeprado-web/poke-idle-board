@@ -74,6 +74,7 @@ module.exports = Object.freeze({
     return Array.isArray(processIds) ? processIds.map(Number).filter(Number.isFinite) : [];
   },
   isWindow(hwnd) { return request('isWindow', { hwnd }); },
+  ensureEmbedded(hwnd, parent, bounds, style) { return request('ensureEmbedded', { hwnd, parent, style, ...bounds }); },
   disconnectInput(hwnd) { return request('disconnectInput', { hwnd }); },
   closeWindow(hwnd) { return request('closeWindow', { hwnd }); },
   attach(hwnd, parent, bounds, style, owner = '0', originalParent = '0') { return request('attach', { hwnd, parent, owner, originalParent, style, ...bounds }); },

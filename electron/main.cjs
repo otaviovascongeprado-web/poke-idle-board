@@ -100,7 +100,8 @@ function nativeBounds(entry, visibleOverride) {
 }
 async function positionNativeEntry(entry, visibleOverride) {
   if (!entry.hwnd) return { ok: false };
-  return nativeWindows.position(entry.hwnd, nativeBounds(entry, visibleOverride));
+  const parent = mainWindowHandle();
+  return nativeWindows.ensureEmbedded(entry.hwnd, parent, nativeBounds(entry, visibleOverride), entry.originalStyle);
 }
 async function hideNativeEntry(entry) {
   if (entry.hwnd) return nativeWindows.position(entry.hwnd, nativeBounds(entry, false));
@@ -120,7 +121,7 @@ async function attachNativeWindow(entry, candidate) {
   reservedNativeHandles.add(entry.hwnd);
   const parent = mainWindowHandle();
   if (!await nativeWindows.isWindow(parent)) throw new Error('A janela principal do Sincronize não está disponível para encaixe.');
-  const result = await nativeWindows.attach(entry.hwnd, parent, nativeBounds(entry, false), entry.originalStyle, parent, entry.originalParent);
+  const result = await nativeWindows.attach(entry.hwnd, parent, nativeBounds(entry), entry.originalStyle, parent, entry.originalParent);
   if (!result?.ok) throw new Error('O Windows não conseguiu posicionar a janela dentro do painel.');
   const positioned = await positionNativeEntry(entry);
   if (!positioned?.ok) throw new Error('O Windows não conseguiu ajustar a janela ao tamanho do painel.');
@@ -135,6 +136,13 @@ async function pollNativeAppWindow(entry) {
       if (!alive) {
         finishNativeProgram(entry, 'closed', 'Aplicativo encerrado');
         return;
+      }
+      const positioned = await positionNativeEntry(entry);
+      if (!positioned?.ok && !entry.warnedEmbedRepair) {
+        entry.warnedEmbedRepair = true;
+        sendNativeStatus(entry.workspaceId, entry.accountIndex, 'warning', 'Não foi possível manter a janela encaixada. O aplicativo pode ter ativado tela cheia exclusiva.');
+      } else if (positioned?.ok) {
+        entry.warnedEmbedRepair = false;
       }
       return;
     }
@@ -190,7 +198,7 @@ async function pollNativeAppWindow(entry) {
     entry.nativeReadySent = true;
     sendNativeStatus(entry.workspaceId, entry.accountIndex, 'ready', 'Janela conectada ao painel');
     clearInterval(entry.pollTimer);
-    entry.pollTimer = setInterval(() => pollNativeAppWindow(entry), 1800);
+    entry.pollTimer = setInterval(() => pollNativeAppWindow(entry), 500);
     entry.pollTimer.unref?.();
   } catch (error) {
     if (entry.hwnd && entry.originalBounds) {
@@ -343,7 +351,7 @@ async function attachExistingWindow(workspaceId, accountIndex, hwnd) {
     const result = await attachNativeWindow(entry, candidate);
     if (!result?.ok) throw new Error('O Windows não conseguiu encaixar essa janela. Apps elevados, exclusivos ou que não permitem incorporação não são compatíveis.');
     sendNativeStatus(workspaceId, accountIndex, 'loading', `Integrando ${candidate.processName || candidate.title} ao painel`);
-    entry.pollTimer = setInterval(() => pollNativeAppWindow(entry), 1800);
+    entry.pollTimer = setInterval(() => pollNativeAppWindow(entry), 500);
     entry.pollTimer.unref?.();
     return { ok: true };
   } catch (error) {
