@@ -25,10 +25,7 @@ if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
   app.on('second-instance', () => {
-    if (!mainWindow) return;
-    if (mainWindow.isMinimized()) mainWindow.restore();
-    mainWindow.show();
-    mainWindow.focus();
+    showMainWindow(true);
   });
   app.whenReady().then(createMainWindow);
 }
@@ -38,11 +35,7 @@ app.on('activate', () => {
     createMainWindow();
     return;
   }
-  if (mainWindow && !mainWindow.isDestroyed()) {
-    if (mainWindow.isMinimized()) mainWindow.restore();
-    mainWindow.show();
-    mainWindow.focus();
-  }
+  showMainWindow(true);
 });
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
@@ -50,6 +43,13 @@ app.on('window-all-closed', () => {
 
 function validWorkspaceId(value) {
   return typeof value === 'string' && /^[a-z0-9-]{1,64}$/.test(value);
+}
+function showMainWindow(maximize = false) {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  if (mainWindow.isMinimized()) mainWindow.restore();
+  if (maximize && !mainWindow.isMaximized()) mainWindow.maximize();
+  mainWindow.show();
+  mainWindow.focus();
 }
 function validAccountIndex(value) {
   return Number.isInteger(value) && value >= 0 && value < ACCOUNT_COUNT;
@@ -713,8 +713,10 @@ function createMainWindow() {
     }
   });
   mainWindow.once('ready-to-show', () => {
-    mainWindow?.show();
-    mainWindow?.focus();
+    showMainWindow(true);
+  });
+  mainWindow.on('restore', () => {
+    if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isMaximized()) mainWindow.maximize();
   });
   registerIpcHandlers();
   mainWindow.on('resize', () => {
