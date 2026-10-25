@@ -87,7 +87,8 @@ function paneLayoutFor(workspaceId, accountIndex) {
 }
 function nativeBounds(entry, visibleOverride) {
   const layout = paneLayoutFor(entry.workspaceId, entry.accountIndex);
-  const visible = visibleOverride ?? Boolean(!modalOverlayOpen && layout?.mode === 'app' && layout.visible);
+  const isActiveWorkspace = entry.workspaceId === lastLayoutWorkspaceId;
+  const visible = visibleOverride ?? Boolean(!modalOverlayOpen && isActiveWorkspace && layout?.mode === 'app' && layout.visible);
   // Renderer bounds use device-independent pixels; Win32 SetWindowPos uses physical pixels.
   const scale = Number.isFinite(layout?.scale) ? Math.min(4, Math.max(0.5, layout.scale)) : 1;
   return {
