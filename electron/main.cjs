@@ -91,11 +91,24 @@ function nativeBounds(entry, visibleOverride) {
   const visible = visibleOverride ?? Boolean(!modalOverlayOpen && isActiveWorkspace && layout?.mode === 'app' && layout.visible);
   // Renderer bounds use device-independent pixels; Win32 SetWindowPos uses physical pixels.
   const scale = Number.isFinite(layout?.scale) ? Math.min(4, Math.max(0.5, layout.scale)) : 1;
+  let x = Math.round((layout?.x || 0) * scale);
+  let y = Math.round((layout?.y || 0) * scale);
+  let width = Math.max(1, Math.round((layout?.width || 800) * scale));
+  let height = Math.max(1, Math.round((layout?.height || 600) * scale));
+  const aspectRatio = entry.contentAspectRatio;
+  if (Number.isFinite(aspectRatio) && aspectRatio >= 0.5 && aspectRatio <= 3) {
+    if (width / height > aspectRatio) {
+      const fittedWidth = Math.max(1, Math.round(height * aspectRatio));
+      x += Math.floor((width - fittedWidth) / 2);
+      width = fittedWidth;
+    } else {
+      const fittedHeight = Math.max(1, Math.round(width / aspectRatio));
+      y += Math.floor((height - fittedHeight) / 2);
+      height = fittedHeight;
+    }
+  }
   return {
-    x: Math.round((layout?.x || 0) * scale),
-    y: Math.round((layout?.y || 0) * scale),
-    width: Math.max(1, Math.round((layout?.width || 800) * scale)),
-    height: Math.max(1, Math.round((layout?.height || 600) * scale)),
+    x, y, width, height,
     visible
   };
 }
@@ -117,6 +130,8 @@ async function attachNativeWindow(entry, candidate) {
   entry.hwnd = String(candidate.hwnd);
   entry.targetPid = Number(candidate.pid);
   entry.originalBounds = candidate.bounds || { x: 80, y: 80, width: 1100, height: 800 };
+  const originalAspect = Number(candidate.bounds?.width) / Number(candidate.bounds?.height);
+  entry.contentAspectRatio = Number.isFinite(originalAspect) && originalAspect >= 0.5 && originalAspect <= 3 ? originalAspect : null;
   entry.originalStyle = String(candidate.style || 0);
   entry.originalParent = String(candidate.parent || 0);
   reservedNativeHandles.add(entry.hwnd);

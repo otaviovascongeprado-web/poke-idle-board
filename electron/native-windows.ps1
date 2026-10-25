@@ -87,9 +87,10 @@ public static class SincronizeWindowApi {
     SetWindowPosEx(hWnd, IntPtr.Zero, 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0004 | 0x0010 | 0x0020);
   }
   public static bool Place(IntPtr hWnd, int x, int y, int width, int height, bool visible) {
-    const uint NOACTIVATE = 0x0010, NOOWNERZORDER = 0x0200;
-    bool placed = SetWindowPosEx(hWnd, new IntPtr(-2), x, y, Math.Max(1, width), Math.Max(1, height), NOACTIVATE | NOOWNERZORDER);
+    const uint NOACTIVATE = 0x0010, NOOWNERZORDER = 0x0200, NOCOPYBITS = 0x0100;
+    bool placed = SetWindowPosEx(hWnd, new IntPtr(-2), x, y, Math.Max(1, width), Math.Max(1, height), NOACTIVATE | NOOWNERZORDER | NOCOPYBITS);
     ShowWindow(hWnd, visible ? 4 : 0);
+    if (placed && visible) RedrawWindow(hWnd, IntPtr.Zero, IntPtr.Zero, 0x0001 | 0x0080);
     return placed;
   }
   public static bool Place(IntPtr hWnd, IntPtr owner, int x, int y, int width, int height, bool visible) {
