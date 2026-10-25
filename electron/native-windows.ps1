@@ -34,6 +34,7 @@ public static class SincronizeWindowApi {
   [DllImport("user32.dll", SetLastError=true)] private static extern bool AttachThreadInput(uint attach, uint attachTo, bool attachInput);
   [DllImport("user32.dll")] private static extern IntPtr SetFocus(IntPtr hWnd);
   [DllImport("user32.dll")] private static extern IntPtr GetFocus();
+  [DllImport("user32.dll")] private static extern uint GetQueueStatus(uint flags);
   [DllImport("kernel32.dll")] private static extern uint GetCurrentThreadId();
   private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
   [DllImport("user32.dll")] private static extern bool EnumWindows(EnumWindowsProc callback, IntPtr lParam);
@@ -93,6 +94,7 @@ public static class SincronizeWindowApi {
     uint childThread = GetWindowThreadProcessId(child, out childPid);
     uint ownerThread = GetWindowThreadProcessId(owner, out ownerPid);
     uint helperThread = GetCurrentThreadId();
+    GetQueueStatus(0x04FF);
     var attached = new List<uint>();
     try {
       if (childThread == 0) return false;
