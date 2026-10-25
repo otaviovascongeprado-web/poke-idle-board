@@ -140,7 +140,7 @@ async function attachNativeWindow(entry, candidate) {
   entry.originalParent = String(candidate.parent || 0);
   reservedNativeHandles.add(entry.hwnd);
   await createNativeHost(entry);
-  const result = await nativeWindows.attach(entry.hwnd, entry.hostHwnd, nativeChildBounds(entry, false), entry.originalStyle);
+  const result = await nativeWindows.attach(entry.hwnd, entry.hostHwnd, nativeChildBounds(entry, false), entry.originalStyle, entry.hostWindowHandle, entry.originalParent);
   if (!result?.ok) throw new Error('O Windows não conseguiu posicionar a janela dentro do painel.');
   const positioned = await positionNativeEntry(entry);
   if (!positioned?.ok) throw new Error('O Windows não conseguiu ajustar a janela ao tamanho do painel.');
@@ -228,6 +228,7 @@ async function pollNativeAppWindow(entry) {
 }
 function finishNativeProgram(entry, state, message) {
   if (entry.pollTimer) clearInterval(entry.pollTimer);
+  if (entry.hwnd) nativeWindows.disconnectInput(entry.hwnd).catch(() => {});
   if (entry.hwnd) reservedNativeHandles.delete(entry.hwnd);
   nativeApps.delete(entry.key);
   destroyNativeHost(entry);

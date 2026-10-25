@@ -80,8 +80,9 @@ module.exports = Object.freeze({
   positionHost(hwnd, bounds) { return request('positionHost', { hwnd, ...bounds }); },
   destroyHost(hwnd) { return request('destroyHost', { hwnd }); },
   isWindow(hwnd) { return request('isWindow', { hwnd }); },
+  disconnectInput(hwnd) { return request('disconnectInput', { hwnd }); },
   closeWindow(hwnd) { return request('closeWindow', { hwnd }); },
-  attach(hwnd, parent, bounds, style) { return request('attach', { hwnd, parent, style, ...bounds }); },
+  attach(hwnd, parent, bounds, style, owner = '0', originalParent = '0') { return request('attach', { hwnd, parent, owner, originalParent, style, ...bounds }); },
   position(hwnd, bounds) { return request('position', { hwnd, ...bounds }); },
   detach(hwnd, bounds, style, parent = '0') { return request('detach', { hwnd, style, parent, ...bounds }); },
   close() {
